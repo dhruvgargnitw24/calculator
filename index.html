@@ -169,7 +169,12 @@
                 
                 // Handle percentage calculations
                 if (expression.includes('%')) {
-                    expression = expression.replace(/(\d+\.?\d*)%/g, function(match, number) {
+                    const convertPercentage = (match, number) => {
+                return number / 100;
+            };
+            if (expression.includes('%')) {
+                expression = expression.replace(/(\d+\.?\d*)%/g, convertPercentage);
+            }
                         return number / 100;
                     });
                 }
