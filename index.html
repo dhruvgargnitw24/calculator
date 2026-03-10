@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Calculator</title>
-    <style>
+    <link rel="stylesheet" href="style.css">
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -71,6 +71,7 @@
             background-color: #555;
         }
         
+}
         .operator {
             background-color: #ff9500;
         }
@@ -146,7 +147,57 @@
                 displayValue += value;
             }
             updateDisplay();
-        }
+        const currentDisplay = displayValue;
+            const lastChar = currentDisplay.length > 0 ? currentDisplay[currentDisplay.length - 1] : '';
+
+            const isOperator = (char) => ['+', '-', '*', '/'].includes(char);
+
+            // 1. Initial '0' handling for operators and digits
+            if (currentDisplay === '0') {
+                if (value === '.') {
+                    displayValue = '0.'; // Allow starting with '0.'
+                } else if (isOperator(value)) {
+                    if (value === '-') {
+                        displayValue = value; // Allow '0-' to become '-'
+                    } else {
+                        return; // Prevent '0+', '0*', '0/'
+                    }
+                } else {
+                    displayValue = value; // Replace '0' with the first digit (e.g., '0' -> '5')
+                }
+            } else { // Existing logic for non-initial '0' display
+                // 2. Prevent multiple decimal points in a single number segment
+                if (value === '.') {
+                    let lastOperatorIndex = -1;
+                    for (let i = currentDisplay.length - 1; i >= 0; i--) {
+                        if (isOperator(currentDisplay[i])) {
+                            lastOperatorIndex = i;
+                            break;
+                        }
+                    }
+                    const currentNumberSegment = currentDisplay.substring(lastOperatorIndex + 1);
+                    if (currentNumberSegment.includes('.')) {
+                        return; // Do nothing if a decimal already exists in the current number
+                    }
+                }
+
+                // 3. Handle problematic consecutive operators
+                if (isOperator(value)) {
+                    if (isOperator(lastChar)) {
+                        // Allow `*-` and `/-` to form negative numbers (e.g., 5*-3)
+                        if (value === '-' && (lastChar === '*' || lastChar === '/')) {
+                            // Append normally in this specific case
+                        } else {
+                            // For all other consecutive operators (e.g., `++`, `**`, `//`, `+*`, etc.)
+                            // Replace the last operator with the new one.
+                            displayValue = currentDisplay.slice(0, -1) + value;
+                            return; // Appending is done, so return early
+                        }
+                    }
+                }
+                // Default append if no validation rule prevented it
+                displayValue += value;
+            }
         
         function clearDisplay() {
             displayValue = '0';
@@ -172,6 +223,9 @@
                     const convertPercentage = (match, number) => {
                 return number / 100;
             };
+            expression = expression.replace(/(\d+\.?\d*)%/g, convertPercentage);
+                return number / 100;
+            };
             if (expression.includes('%')) {
                 expression = expression.replace(/(\d+\.?\d*)%/g, convertPercentage);
             }
@@ -179,7 +233,7 @@
                     });
                 }
                 
-                displayValue = eval(expression).toString();
+                displayValue = (new Function('return ' + expression)()).toString();
                 updateDisplay();
             } catch (error) {
                 displayValue = 'Error';
