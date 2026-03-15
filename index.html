@@ -4,8 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Calculator</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        <style>
         body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+            }
+    </style>
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
@@ -52,7 +63,7 @@
             grid-gap: 10px;
         }
         
-        button {
+        }
             background-color: #4d4d4d;
             border: none;
             border-radius: 5px;
@@ -102,7 +113,15 @@
     <div class="heading">
         <h1>Calculator</h1>
     </div>
-    <div class="calculator">
+    function calculateSquareRoot() {
+    let display = document.getElementById('display');
+    let currentValue = parseFloat(display.textContent);
+    if (!isNaN(currentValue) && currentValue >= 0) {
+        display.textContent = Math.sqrt(currentValue);
+    } else {
+        display.textContent = 'Error'; 
+    }
+}
         <div class="display" id="display">0</div>
         <div class="buttons">
             <button class="clear" onclick="clearDisplay()">C</button>
@@ -132,6 +151,7 @@
         </div>
     </div>
 
+<button class="operator" id="squareRootBtn">√</button>
     <script>
         let displayValue = '0';
         const display = document.getElementById('display');
@@ -156,14 +176,24 @@
             if (currentDisplay === '0') {
                 if (value === '.') {
                     displayValue = '0.'; // Allow starting with '0.'
-                } else if (isOperator(value)) {
+                function calculateSquareRoot() {
+    const currentValue = parseFloat(displayValue);
+    if (isNaN(currentValue)) {
+        displayValue = 'Error';
+    } else if (currentValue < 0) {
+        displayValue = 'Error: Negative input';
+    } else {
+        displayValue = Math.sqrt(currentValue).toString();
+    }
+    updateDisplay();
+}
                     if (value === '-') {
                         displayValue = value; // Allow '0-' to become '-'
                     } else {
                         return; // Prevent '0+', '0*', '0/'
                     }
                 } else {
-                    displayValue = value; // Replace '0' with the first digit (e.g., '0' -> '5')
+                    newDisplayValue = value; // Replace '0' with the first digit (e.g., '0' -> '5')
                 }
             } else { // Existing logic for non-initial '0' display
                 // 2. Prevent multiple decimal points in a single number segment
@@ -193,7 +223,50 @@
                             displayValue = currentDisplay.slice(0, -1) + value;
                             return; // Appending is done, so return early
                         }
+                    displayValue = safeEvaluateExpression(expression);
+            try {
+                let expression = displayValue;
+
+                // Correct percentage conversion logic:
+                // Handle cases like "123%" (becomes 123/100)
+                // and "100+10%" (becomes 100+(100*10/100))
+                const percentMatch = expression.match(/(.*)(\d+\.?\d*|\.?\d+)\%$/);
+                if (percentMatch) {
+                    const baseExpression = percentMatch[1]; // e.g., "100+"
+                    const percentValue = parseFloat(percentMatch[2]); // e.g., 10
+
+                    // Attempt to find the last operand and operator before the percentage
+                    const lastOperandAndOperatorMatch = baseExpression.match(/(\d+\.?\d*|\.?\d+)\s*([+\-*/])\s*$/);
+                    if (lastOperandAndOperatorMatch) {
+                        const operandA = parseFloat(lastOperandAndOperatorMatch[1]); // e.g., 100
+                        const operator = lastOperandAndOperatorMatch[2]; // e.g., "+"
+
+                        let transformedPercentagePart;
+                        if (operator === '+' || operator === '-') {
+                            // For addition/subtraction, percentage is of the last operand: A + (A * B / 100)
+                            transformedPercentagePart = `(${operandA} * ${percentValue} / 100)`;
+                        } else { // For multiplication/division
+                            // For multiplication/division, percentage is of B itself: A * (B / 100)
+                            transformedPercentagePart = `(${percentValue} / 100)`;
+                        }
+                        // Reconstruct the expression: everything before the last operand-operator pair + operandA + operator + transformed percentage
+                        expression = baseExpression.substring(0, baseExpression.length - lastOperandAndOperatorMatch[0].length) + operandA + operator + transformedPercentagePart;
+                    } else {
+                        // Case: "N%" (no preceding operator, just a number followed by %)
+                        expression = `(${percentValue} / 100)`;
                     }
+                }
+                
+                // Evaluate the expression using new Function() for safer execution than eval()
+                // It's still important to sanitize input if it comes from untrusted sources.
+                const result = new Function('return ' + expression)();
+                displayValue = String(result);
+
+            } catch (e) {
+                displayValue = 'Error'; // Display "Error" if evaluation fails
+            }
+            updateDisplay();
+        }
                 }
                 // Default append if no validation rule prevented it
                 displayValue += value;
@@ -204,7 +277,29 @@
             updateDisplay();
         }
         
-        function deleteChar() {
+        let result = evaluateSafe(expressionToEvaluate);
+                // Replace 'x' with '*' for standard JavaScript evaluation
+                let expressionToEvaluate = displayValue.replace(/x/g, '*');
+
+                // Evaluate the expression
+                // Using eval() with user input requires caution for security.
+                // For this calculator context, it's a common approach.
+                let result = eval(expressionToEvaluate);
+
+                // Check for invalid results (e.g., NaN from invalid operations, Infinity from division by zero)
+                if (isNaN(result) || !isFinite(result)) {
+                    throw new Error("Invalid expression or result.");
+                }
+
+                // Update displayValue with the calculated result
+                displayValue = result.toString();
+            } catch (error) {
+                // Handle any errors during evaluation (e.g., syntax errors, division by zero)
+                displayValue = 'Error';
+            }
+            // Always update the display after calculation attempt or error
+            updateDisplay();
+        }
             if (displayValue.length === 1) {
                 displayValue = '0';
             } else {
